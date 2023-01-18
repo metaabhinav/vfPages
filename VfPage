@@ -1,0 +1,500 @@
+1)Create visualforce pages for Class and Student object and override
+standard “New” and “Edit” buttons.
+
+<apex:page standardController="Student__c" standardStylesheets="true">
+    <apex:form >
+        <apex:pageBlock title="Student Form">
+            <apex:pageBlockSection columns="1">
+                <apex:inputField value="{! Student__c.Name }"/>
+                <apex:inputField value="{! Student__c.First_Name__c }"/>
+                <apex:inputField value="{! Student__c.Last_Name__c }"/>
+                <apex:inputField value="{! Student__c.CLass__c }"/>
+                <apex:inputField value="{! Student__c.Dob__c }"/>
+                <apex:inputField value="{! Student__c.sex__c }"/>
+            </apex:pageBlockSection>
+            <apex:pageBlockButtons >
+                <apex:commandButton action="{! save }" value="Save" />
+                 <apex:commandButton action="{! cancel }" value="Cancel" />
+            </apex:pageBlockButtons>
+        </apex:pageBlock>
+    </apex:form>
+</apex:page>
+
+----------
+
+<apex:page standardController="Class__c">
+    <apex:form >
+        <apex:pageBlock title="CLass Form">
+            <apex:pageBlockSection columns="1">
+                <apex:inputField value="{! Class__c.Name }"/>
+                <apex:inputField value="{! Class__c.classTeacher__c }"/>
+                <apex:inputField value="{! Class__c.custom_status__c }"/>
+            </apex:pageBlockSection>
+            <apex:pageBlockButtons >
+                <apex:commandButton action="{! save }" value="Save" />
+                <apex:commandButton action="{! cancel }" value="Cancel" />
+                
+            </apex:pageBlockButtons>
+        </apex:pageBlock>
+    </apex:form>
+</apex:page>
+
+
+
+2)Create a Page Where some
+Filters in BilingCity, BillingState,
+BillingCountry of Account and
+Click on Search button for
+displaying first 10 Accounts at a
+Time and Provide Pagination for
+(Previous Next and First and
+Last)
+
+
+
+<apex:page controller="SearchAccountDetails"  >
+    <apex:form >
+        <apex:pageBlock id="thePb" title="Account Details To Search">
+            <apex:pageblockSection id="thepbs">
+               
+                <apex:inputfield value="{!acc.BillingCity}"/>
+                <apex:inputfield value="{!acc.BillingState}"/>
+                <apex:inputfield value="{!acc.BillingCountry}"/>
+            </apex:pageblockSection>
+            <apex:pageblockButtons location="bottom">
+                <apex:commandButton value="Search" action="{!searchAcc}" />
+            </apex:pageblockButtons>
+        </apex:pageBlock>
+        <apex:pageBlock title="Account Details" id="noRec" rendered="{! IF(
+                                                                     accountList != null && accountList.size ==0  , true, false)}" >
+            <apex:outputPanel >
+                <h1>No Records Found </h1>
+            </apex:outputPanel>
+        </apex:pageBlock>
+        <apex:pageBlock title="Account Details" id="details" rendered="{! IF(
+                                                                       accountList != null && accountList.size >0, true, false)}" >
+            <apex:pageBlockTable value="{!accountList}" var="a">
+                <apex:column headerValue="Account Name">
+                    <apex:outputLink target="_blank"
+                                     value="/{!a.id}">{!a.Name}</apex:outputLink>
+                </apex:column>
+                <apex:column value="{!a.accountNumber}" headerValue="Account
+                                                                       Number"/>
+                <apex:column value="{!a.Industry}" headerValue="Industry"/>
+                <apex:column value="{!a.AnnualRevenue}" headerValue="Annual
+                                                                     Revenue"/>
+                <apex:column value="{!a.Phone}" headerValue="Phone"/>
+                <apex:column value="{!a.website}" headerValue="Web"/>
+            </apex:pageBlockTable>
+            <apex:commandButton value="First" rerender="details"
+                                action="{!FirstPage}" disabled="{!prev}" />
+            <apex:commandButton value="Previous" rerender="details"
+                                action="{!previous}" disabled="{!prev}" />
+            <apex:commandButton value="Next" rerender="details" action="{!next}"
+                                disabled="{!nxt}" />
+            <apex:commandButton value="Last Page" rerender="details"
+                                action="{!LastPage}" disabled="{!nxt}" />
+        </apex:pageBlock>
+    </apex:form>
+</apex:page>
+
+--------------
+
+public with sharing class SearchAccountDetails {
+    public Account acc{get;set;}
+    public List<Account> accountList {get;set;}
+    private integer totalRecs = 0;
+    private integer OffsetSize = 0;
+    private integer LimitSize= 10;
+    List<string> conditions = new List<string>();
+    
+    public SearchAccountDetails()
+    {
+        acc = new Account();
+       
+    }
+    public void searchAcc()
+    {
+        if(accountList !=null && accountList.size()>0)
+        {
+            accountList=null;
+        }
+        searchAccounts();
+        conditions.clear();
+    }
+    public Void searchAccounts(){
+        if(accountList != null && !accountList.isEmpty()){
+            accountList.clear();
+        }
+        String strQuery ='SELECT Id,Name,AccountNumber,CreatedDate,Phone,Website,Industry,AnnualRevenue From Account';
+           
+        if(acc.BillingCity !=null && acc.BillingCity !=''){
+            conditions.add('BillingCity Like\'%' +acc.BillingCity +'%\' ');
+        }
+        if(acc.BillingState !=null && acc.BillingState !=''){
+            conditions.add('BillingState Like\'%' +acc.BillingState +'%\' ');
+        }
+        if(acc.BillingCountry !=null && acc.BillingCountry !=''){
+            conditions.add('BillingCountry Like\'%' +acc.BillingCountry +'%\' ');
+        }
+        if (conditions.size() > 0) {
+            strQuery += ' WHERE ' + conditions[0];
+            for (Integer i = 1; i < conditions.size(); i++)
+                strQuery += ' AND ' + conditions[i];
+        }
+        if(totalRecs !=null && totalRecs ==0){
+            List<Account> accTemp = Database.query(strQuery);
+            totalRecs = (accTemp !=null &&accTemp.size()>0)?accTemp.size():0;
+        }
+        strQuery += ' ORDER BY Name ASC LIMIT :LimitSize OFFSET:offSetSize';
+                accountList = Database.query(strQuery);
+    }
+    public void FirstPage()
+    {
+        OffsetSize = 0;
+        searchAccounts();
+    }
+    public void previous()
+    {
+        OffsetSize = (OffsetSize-LimitSize);
+        searchAccounts();
+    }
+    public void next()
+    {
+        OffsetSize = OffsetSize + LimitSize;
+        searchAccounts();
+    }
+    public void LastPage()
+    {
+        OffsetSize = totalrecs - math.mod(totalRecs,LimitSize);
+        searchAccounts();
+    }
+    public boolean getprev()
+    {
+        if(OffsetSize == 0){
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+    public boolean getnxt()
+    {
+        if((OffsetSize + LimitSize) > totalRecs){
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+}
+
+
+3) As you have created two new fields (BillToContact and Manager) on Opportunity
+previously. Now requirement is select BillToContact using Custom LookUp (This lookup displays list
+of Contacts related to that Manager on Opportunity).
+
+<apex:page controller="ManagerContactController">
+    <apex:form >
+        <apex:pageBlock title="Contacts Related to Manager">
+            <apex:pageBlockButtons location="bottom">
+                <apex:commandButton value="Save" action="{! save}"/>
+                <apex:commandButton value="Clear" action="{!clear}"/>
+                <apex:commandButton value="Cancel" action="{!cancel}"/>
+            </apex:pageBlockButtons>
+            <apex:pageBlockSection >
+                
+                <apex:selectRadio value="{!conId}" >
+                    <apex:selectOptions value="{!Contacts}"/>
+                </apex:selectRadio>
+                
+                
+                
+            </apex:pageBlockSection>
+        </apex:pageBlock>
+    </apex:form>
+</apex:page>
+
+-------------
+
+public with sharing class ManagerContactController {
+    public List<contact> contacts;
+    public string oppId;
+    public string conId;
+    Opportunity o;
+    public ManagerContactController(){
+        oppId = System.currentPageReference().getParameters().get('ID');
+        o = [SELECT name, Manager__c FROM opportunity WHERE id =: oppId];
+        Id i = o.Manager__c;
+        contacts = [SELECT id, name FROM contact WHERE accountId =: i];
+        
+    }
+    public PageReference clear() {
+        conId = null;
+        o.BillToContact__c = conId;
+        update o;
+        PageReference pg = new PageReference('/'+oppid);
+        pg.setRedirect(true);
+        return pg;
+    }
+    public PageReference save() {
+        if(conId == null) {
+            System.debug('ConTd - '+ conId);
+            return Null;
+        }
+        else {
+            o.BillToContact__c = ConId;
+            System.debug('ConTd - '+ conId);
+            update o;
+            
+            PageReference pg = new PageReference('/'+oppid);
+            pg.setRedirect(true);
+            return pg;
+        }
+    }
+    public PageReference cancel() {
+        PageReference pg = new PageReference('/'+oppid);
+        pg.setRedirect(true);
+        return pg;
+    }
+    public Id getconId(){
+        return conId;
+    }
+    public void setconId(Id cId){
+        conId=cId;
+    }
+	public List<SelectOption> getContacts() {
+        List<SelectOption> options = new List<SelectOption>(); 
+        for(Contact con : contacts){
+            options.add(new SelectOption(con.id,con.name));
+        }
+        return options; 
+    }
+    public void setContacts(List<contact> contacts){
+        this.contacts=contacts;
+    }
+    
+}
+
+
+4)  Create a Formula Link Field named “Generate PDF”.
+
+Student Details VF PAGE
+
+<apex:page standardController="Student__c" action="{!saveAttach}"
+extensions="StudentDetails" renderAs="pdf">
+</apex:page>
+
+StudentDetVF VF page to generate pdf
+
+<apex:page standardController="Student__c">
+    <apex:detail />
+</apex:page>
+
+
+Controller
+
+public class StudentDetails {
+    public Student__c student{get;set;}
+    public Id id;
+    public StudentDetails(ApexPages.StandardController controller){
+        id = apexpages.currentPage().getParameters().get('ID');
+    }
+    public PageReference saveAttach(){
+        PageReference pdf = Page.StudentDetVF;
+        pdf.getParameters().put('id',id);
+        List<Attachment> att=[Select id,name from Attachment where parentId=:id ];
+        if(att.size()>0)
+            Delete att;
+        // create the new attachment
+        Attachment attach = new Attachment();
+        // the contents of the attachment from the pdf
+        Blob body;
+        try {
+            // returns the output of the page as a PDF
+            body = pdf.getContentAsPDF();
+        }
+        catch (VisualforceException e) {
+            body = Blob.valueOf('Some Text');
+        }
+        attach.Body = body;
+        // add the user entered name
+        attach.Name = 'StudentDetails.pdf';
+        attach.IsPrivate = false;
+        // attach the pdf to the account
+        attach.ParentId = id;
+        insert attach;
+        // send the user to the account to view results
+        return new PageReference('/'+id);
+    }
+}
+
+
+5) Create a page which show output as a JSON formatted string. (We can use this mechanism when we
+send response to any service as a JSON)
+
+<apex:page controller="CreateJson"  standardStylesheets="true" >
+    <apex:pageBlock >
+        <apex:pageBlockSection >
+            <apex:form >
+                {!jsonStr}
+            </apex:form>
+        </apex:pageBlockSection>
+    </apex:pageBlock>
+</apex:page>
+
+
+public class CreateJson {
+    public String jsonStr {get;set;}
+    public CreateJson() {
+        jsonStr = prepareData();
+    }
+    private string prepareData(){
+        List<Account> accounts = [SELECT ID,NAME,Phone,
+                                  AnnualRevenue FROM Account];
+        return JSON.serialize(accounts);
+    }
+}
+
+
+6) Create 2 record types (TGT and PGT) in Teacher (Contact) table and on detail page show bar as a
+Header containing “Record Type Value” in a bar.
+
+<apex:page standardController="contact" extensions="TgtPgt">
+    <apex:form >
+        <apex:pageBlock title="Teacher Detail">
+            <apex:pageBlockButtons location="top">
+                <apex:commandButton action="{! save}" value="Save"/>
+                <apex:commandButton action="{! clone}" value="Clone"/>
+                <apex:commandButton action="{! edit}" value="Edit"/>
+            </apex:pageBlockButtons>
+            <div style="background-color:Blue;height:25px">
+                <center>
+                    <h2 style="color:white;font-size:150%"><apex:outputField value="{!con.RecordType.Name}"/></h2>
+                </center>
+            </div>
+            <apex:pageBlockSection columns="2">
+                <apex:outputText >Contact Owner: {!contact.owner.Name}</apex:outputText>
+                <apex:outputText >Name: {!contact.name}</apex:outputText>
+                <apex:outputText >Account Name:{!contact.account.Name}</apex:outputText>
+                <apex:outputText >Title: {!contact.title}</apex:outputText>
+                <apex:outputText >Department:{!contact.department}</apex:outputText>
+                <apex:outputText >Phone: {!contact.phone}</apex:outputText>
+                <apex:outputText >Home Phone:{!contact.homePhone}</apex:outputText>
+                <apex:outputText >Mobile: {!contact.mobilePhone}</apex:outputText>
+                <apex:outputText >Other Phone:{!contact.otherPhone}</apex:outputText>
+                <apex:outputText >Fax: {!contact.fax}</apex:outputText>
+            </apex:pageBlockSection>
+        </apex:pageBlock>
+    </apex:form>
+</apex:page>
+
+
+
+public class TgtPgt {
+    public id contactID;
+    public contact con{get;set;}
+    public TgtPgt(ApexPages.StandardController controller) {
+        if(ApexPages.currentPage().getParameters().get('id') != null) {
+            this.contactID = ApexPages.currentPage().getParameters().get('id');
+            con = [SELECT id, RecordType.name, name,account.name,OtherPhone, mobilePhone, owner.name, HomePhone,
+                   Phone, title, department, fax 
+                   FROM contact 
+                   WHERE id =:contactId];
+            
+        }
+    }
+}
+
+
+7) Create a Visualforce Page named manageClass , on this page show list of available classes with Edit
+and Delete Link. When will user click on Edit a small Area displayed just below the same page with
+some fields (4-5 fields). User can save and return back to same Page. (You can use ajax functionality
+for same).
+
+
+<apex:page controller="ManageClassController">
+    <apex:form id="form">
+        <apex:pageBlock id="block">
+            <apex:pageBlockTable value="{!classes}" var="c">
+                <apex:column value="{!c.Name}"/>
+                <apex:column >
+                    <apex:commandLink action="{!edit}"  value="Edit">
+                        <apex:param name="classId" value="{!c.Id}"/>
+                    </apex:commandLink>
+                </apex:column>
+                <apex:column >
+                    <apex:commandLink action="{!dlt}" value="Delete">
+                        <apex:param name="classId" value="{!c.Id}"/>
+                    </apex:commandLink>
+                </apex:column>
+            </apex:pageBlockTable>
+        </apex:pageBlock>
+        <apex:outputPanel id="editPanel" rendered="{!editing}">
+            <apex:pageBlock id="editBlock">
+                <apex:pageBlockSection >
+                    <apex:inputField value="{! SelectedClass.Name }"/>
+                    <apex:inputField value="{! SelectedClass.classTeacher__c }"/>
+                    <apex:inputField value="{! SelectedClass.custom_status__c }"/>
+                    
+                </apex:pageBlockSection>
+                <apex:pageBlockButtons >
+                    <apex:commandButton action="{!save}" value="Save" />
+                    <apex:commandButton action="{!cancel}" value="Cancel" />
+                </apex:pageBlockButtons>
+            </apex:pageBlock>
+        </apex:outputPanel>
+    </apex:form>
+</apex:page>
+
+
+
+public with sharing class ManageClassController {
+    public List<Class__c> classes {get; set;}
+    public Class__c selectedClass {get; set;}
+    public Boolean editing {get; set;}
+    
+    public ManageClassController() {
+        classes = [SELECT Id, Name,  classTeacher__c , custom_status__c FROM Class__c];
+        editing = false;
+    }
+    private Class__c giveSelectedClass(String clsId){
+        for(Class__c cls : classes){
+            if(cls.id == clsId){
+                return cls;
+            }
+        }
+        return null;
+    }
+    public void edit() {
+        String classId = ApexPages.currentPage().getParameters().get('classId');
+        selectedClass = giveSelectedClass(classId);
+        editing = true;
+    }
+    
+    public PageReference save() {
+        update selectedClass;
+        editing = false;
+        classes = [SELECT Id, Name,  classTeacher__c , custom_status__c FROM Class__c];
+        PageReference pg = new PageReference('/apex/ManageClass');
+        pg.setRedirect(true);
+        return pg;
+    }
+    
+    public PageReference cancel() {
+        editing = false;
+        selectedClass = null;
+        PageReference pg = new PageReference('/apex/ManageClass');
+        pg.setRedirect(true);
+        return pg;
+    }
+    
+    public PageReference dlt() {
+        String classId = ApexPages.currentPage().getParameters().get('classId');
+        delete  giveSelectedClass(classId);
+        classes = [SELECT Id, Name,  classTeacher__c , custom_status__c FROM Class__c];
+        PageReference pg = new PageReference('/apex/ManageClass');
+        pg.setRedirect(true);
+        return pg;
+    }
+}
